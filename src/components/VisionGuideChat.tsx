@@ -199,7 +199,7 @@ export default function VisionGuideChat({ onAddVision }: VisionGuideChatProps) {
   };
 
   return (
-    <div id="vision-chat" className="bg-stone-900 border border-stone-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[700px] md:h-full min-h-[600px] relative">
+    <div id="vision-chat" className="bg-stone-900 border border-stone-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[480px] sm:h-[600px] md:h-[680px] w-full relative">
       {/* Toast Alert overlay inside Chat Component */}
       {alertMsg && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-stone-950/95 border-2 border-stone-800/90 text-stone-100 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-extrabold animate-fade-in backdrop-blur-sm min-w-[280px] justify-center">
@@ -446,18 +446,19 @@ export default function VisionGuideChat({ onAddVision }: VisionGuideChatProps) {
             type="text"
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
+            onFocus={() => setTimeout(scrollToBottom, 150)}
             disabled={isLoading || gptStatus === "finalized"}
             placeholder={
               gptStatus === "finalized"
                 ? "청사진 설계 완료. 위의 [핀하기] 버튼을 눌러주세요."
                 : "비전 마스터 가이드와 대화하세요..."
             }
-            className="flex-1 bg-stone-950 border border-stone-850 text-stone-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-amber-500 focus:bg-stone-950 transition-all disabled:opacity-50 placeholder-stone-600"
+            className="flex-1 bg-stone-950 border border-stone-850 text-stone-100 rounded-xl px-4 h-11 text-base sm:text-xs focus:outline-none focus:border-amber-500 focus:bg-stone-950 transition-all disabled:opacity-50 placeholder-stone-600 font-sans"
           />
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim() || gptStatus === "finalized"}
-            className="bg-amber-500 hover:bg-amber-600 text-stone-950 p-3 rounded-xl transition-all shadow-md disabled:bg-stone-950 disabled:shadow-none hover:scale-[1.03] active:scale-[0.98] cursor-pointer flex items-center justify-center shrink-0"
+            className="bg-amber-500 hover:bg-amber-600 text-stone-950 h-11 w-11 rounded-xl transition-all shadow-md disabled:bg-stone-950 disabled:shadow-none hover:scale-[1.03] active:scale-[0.98] cursor-pointer flex items-center justify-center shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>
