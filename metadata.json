@@ -1,0 +1,6 @@
+{
+  "name": "비전보드 마스터 가이드",
+  "description": "사용자의 막연한 꿈과 버킷 계획을 구체적인 예산 산출과 함께 1:1 대화형 피드백을 통해 완벽한 비전 그리드 카드로 생성해주는 AI 마스터 동반자 웹앱입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
