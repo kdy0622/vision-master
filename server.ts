@@ -57,11 +57,39 @@ app.post("/api/chat-guide", async (req: Request, res: Response) => {
       });
     }
 
-    // Format chat history for Gemini contents parameter
-    const formattedContents = messages.map(msg => ({
-      role: msg.role === "model" ? "model" as const : "user" as const,
-      parts: [{ text: msg.text }]
-    }));
+    // Format and clean chat history so that:
+    // 1. It starts with role: "user" (Gemini requirement)
+    // 2. Roles alternate between 'user' and 'model' (Gemini requirement)
+    // 3. Consecutive roles are merged
+    const formattedContents: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+    for (const msg of messages) {
+      if (formattedContents.length === 0) {
+        if (msg.role === "user") {
+          formattedContents.push({
+            role: "user",
+            parts: [{ text: msg.text }]
+          });
+        }
+      } else {
+        const lastMsg = formattedContents[formattedContents.length - 1];
+        const currentRole = msg.role === "model" ? "model" as const : "user" as const;
+        if (lastMsg.role === currentRole) {
+          lastMsg.parts[0].text += "\n" + msg.text;
+        } else {
+          formattedContents.push({
+            role: currentRole,
+            parts: [{ text: msg.text }]
+          });
+        }
+      }
+    }
+
+    if (formattedContents.length === 0) {
+      formattedContents.push({
+        role: "user",
+        parts: [{ text: "안녕하세요" }]
+      });
+    }
 
     // System instruction to guide the Vision Board Master Guide behavior.
     const systemInstruction = 
