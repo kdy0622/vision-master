@@ -18,7 +18,7 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<VisionCategory>("해보고 싶은 것");
   const [target, setTarget] = useState<VisionTarget>("본인");
-  const [targetYears, setTargetYears] = useState(1);
+  const [targetYears, setTargetYears] = useState<number | "">(1);
   const [targetDate, setTargetDate] = useState(() => calculateTargetDateFromYears("", 1));
   const [placeLocation, setPlaceLocation] = useState("");
   const [details, setDetails] = useState("");
@@ -30,10 +30,24 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
     setTimeout(() => setAlertMsg(null), 3500);
   };
 
-  const handleYearsChange = (years: number) => {
+  const handleYearsChange = (years: number | "") => {
     setTargetYears(years);
-    const date = calculateTargetDateFromYears(today, years);
-    setTargetDate(date);
+    if (years !== "") {
+      const date = calculateTargetDateFromYears(today, years);
+      setTargetDate(date);
+    }
+  };
+
+  const handleYearsIncrement = () => {
+    const current = typeof targetYears === "number" ? targetYears : 1;
+    const next = Math.min(50, current + 1);
+    handleYearsChange(next);
+  };
+
+  const handleYearsDecrement = () => {
+    const current = typeof targetYears === "number" ? targetYears : 1;
+    const next = Math.max(1, current - 1);
+    handleYearsChange(next);
   };
 
   const handleDateChange = (date: string) => {
@@ -43,11 +57,65 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
   };
   
   // Budgets
-  const [travel, setTravel] = useState(0);
-  const [lodging, setLodging] = useState(0);
-  const [activities, setActivities] = useState(0);
-  const [budgetMonthly, setBudgetMonthly] = useState(0);
-  const [budgetOneTime, setBudgetOneTime] = useState(0);
+  const [travel, setTravel] = useState<number | "">(0);
+  const [lodging, setLodging] = useState<number | "">(0);
+  const [activities, setActivities] = useState<number | "">(0);
+  const [budgetMonthly, setBudgetMonthly] = useState<number | "">(0);
+  const [budgetOneTime, setBudgetOneTime] = useState<number | "">(0);
+
+  // Steppers for Budgets
+  const handleTravelIncrement = () => {
+    const current = typeof travel === "number" ? travel : 0;
+    setTravel(current + 10);
+  };
+  const handleTravelDecrement = () => {
+    const current = typeof travel === "number" ? travel : 0;
+    setTravel(Math.max(0, current - 10));
+  };
+
+  const handleLodgingIncrement = () => {
+    const current = typeof lodging === "number" ? lodging : 0;
+    setLodging(current + 10);
+  };
+  const handleLodgingDecrement = () => {
+    const current = typeof lodging === "number" ? lodging : 0;
+    setLodging(Math.max(0, current - 10));
+  };
+
+  const handleActivitiesIncrement = () => {
+    const current = typeof activities === "number" ? activities : 0;
+    setActivities(current + 10);
+  };
+  const handleActivitiesDecrement = () => {
+    const current = typeof activities === "number" ? activities : 0;
+    setActivities(Math.max(0, current - 10));
+  };
+
+  const handleBudgetMonthlyIncrement = () => {
+    const current = typeof budgetMonthly === "number" ? budgetMonthly : 0;
+    const next = current + 10;
+    setBudgetMonthly(next);
+    if (category === "해보고 싶은 것") {
+      setBudgetOneTime(next * 12);
+    }
+  };
+  const handleBudgetMonthlyDecrement = () => {
+    const current = typeof budgetMonthly === "number" ? budgetMonthly : 0;
+    const next = Math.max(0, current - 10);
+    setBudgetMonthly(next);
+    if (category === "해보고 싶은 것") {
+      setBudgetOneTime(next * 12);
+    }
+  };
+
+  const handleBudgetOneTimeIncrement = () => {
+    const current = typeof budgetOneTime === "number" ? budgetOneTime : 0;
+    setBudgetOneTime(current + 10);
+  };
+  const handleBudgetOneTimeDecrement = () => {
+    const current = typeof budgetOneTime === "number" ? budgetOneTime : 0;
+    setBudgetOneTime(Math.max(0, current - 10));
+  };
 
   // Curated stock photos
   const presets = CURATED_COVERS[category] || CURATED_COVERS["해보고 싶은 것"];
@@ -90,39 +158,61 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
   };
 
   const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
+    
+    // Explicit list evaluation for custom beautiful alert warnings
+    const missingFields: string[] = [];
     if (!title.trim()) {
-       showAlert("비전 제목을 입력해 주십시오.", "error");
-       return;
+      missingFields.push("비전 제목");
+    }
+    if (!placeLocation.trim()) {
+      missingFields.push("장소/위치");
+    }
+    if (!details.trim()) {
+      missingFields.push("상세 기획 및 소망 묘사");
+    }
+
+    if (missingFields.length > 0) {
+      showAlert(`필수 입력 사항 누락: [${missingFields.join(", ")}]을(를) 입력해주세요. 비어 있는 곳을 채워주셔야 등록이 가능합니다.`, "error");
+      return;
     }
 
     let finalBudgetOneTime = 0;
     let finalBudgetDetails = { travel: 0, lodging: 0, activities: 0, total: 0 };
 
+    const travelNum = Number(travel) || 0;
+    const lodgingNum = Number(lodging) || 0;
+    const activitiesNum = Number(activities) || 0;
+    const budgetOneTimeNum = Number(budgetOneTime) || 0;
+    const budgetMonthlyNum = Number(budgetMonthly) || 0;
+    const targetYearsNum = Number(targetYears) || 1;
+
     if (category === "소유") {
-      finalBudgetOneTime = lodging;
+      finalBudgetOneTime = lodgingNum;
       finalBudgetDetails = {
         travel: 0,
-        lodging: lodging,
+        lodging: lodgingNum,
         activities: 0,
-        total: lodging
+        total: lodgingNum
       };
     } else if (category === "가고 싶은 곳") {
-      finalBudgetOneTime = travel + lodging + activities;
+      finalBudgetOneTime = travelNum + lodgingNum + activitiesNum;
       finalBudgetDetails = {
-        travel,
-        lodging,
-        activities,
+        travel: travelNum,
+        lodging: lodgingNum,
+        activities: activitiesNum,
         total: finalBudgetOneTime
       };
     } else {
       // 해보고 싶은 것
-      finalBudgetOneTime = budgetOneTime;
+      finalBudgetOneTime = budgetOneTimeNum;
       finalBudgetDetails = {
         travel: 0,
         lodging: 0,
         activities: 0,
-        total: budgetOneTime
+        total: budgetOneTimeNum
       };
     }
 
@@ -134,8 +224,8 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
       category,
       target,
       budgetOneTime: finalBudgetOneTime,
-      budgetMonthly,
-      targetYears,
+      budgetMonthly: budgetMonthlyNum,
+      targetYears: targetYearsNum,
       targetDate,
       details: details || "추가된 상세 묘사가 없습니다.",
       budgetDetails: finalBudgetDetails,
@@ -193,7 +283,6 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
               onChange={e => setTitle(e.target.value)}
               placeholder="예: 내 소망 7성급 스위트룸 호캉스 즐기기"
               className="bg-stone-900 border border-stone-800 text-sm text-stone-150 rounded-xl px-4 py-3 w-full focus:outline-none focus:border-amber-500 transition-all shadow-inner font-sans"
-              required
             />
           </div>
 
@@ -236,14 +325,37 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1 sm:col-span-1">
               <label className="text-[10px] uppercase font-bold tracking-wider text-stone-400 font-mono block">D-Day 연도수 (몇 년 후)</label>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={targetYears}
-                onChange={e => handleYearsChange(parseInt(e.target.value) || 1)}
-                className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl p-3 w-full focus:outline-none focus:border-amber-500 font-mono"
-              />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleYearsDecrement}
+                  className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer transition-all"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={targetYears === "" ? "" : targetYears}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      handleYearsChange("");
+                    } else {
+                      handleYearsChange(parseInt(val) || 1);
+                    }
+                  }}
+                  className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl h-10 w-full text-center focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleYearsIncrement}
+                  className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer transition-all"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1 sm:col-span-1">
@@ -252,7 +364,7 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
                 type="date"
                 value={targetDate}
                 onChange={e => handleDateChange(e.target.value)}
-                className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl p-3 w-full focus:outline-none focus:border-amber-500 font-mono"
+                className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl h-10 p-3 w-full focus:outline-none focus:border-amber-500 font-mono"
               />
             </div>
 
@@ -263,7 +375,7 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
                 value={placeLocation}
                 onChange={e => setPlaceLocation(e.target.value)}
                 placeholder="예: 강원도 속초 바다정원"
-                className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl p-3 w-full focus:outline-none focus:border-amber-500"
+                className="bg-stone-900 border border-stone-800 text-xs text-stone-150 rounded-xl h-10 p-3 w-full focus:outline-none focus:border-amber-500"
               />
             </div>
           </div>
@@ -291,104 +403,256 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
             </h4>
             
             {category === "소유" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">구입 가격 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={lodging}
-                    onChange={e => setLodging(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">구입 가격 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLodgingDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={lodging === "" ? "" : lodging}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setLodging(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleLodgingIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">월 적금 저축액 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={budgetMonthly}
-                    onChange={e => setBudgetMonthly(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-amber-400 font-extrabold rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">월 적금 저축액 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={budgetMonthly === "" ? "" : budgetMonthly}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setBudgetMonthly(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-amber-400 font-extrabold rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {category === "가고 싶은 곳" && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 font-sans">
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">항공 교통비 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={travel}
-                    onChange={e => setTravel(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">항공 교통비 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleTravelDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={travel === "" ? "" : travel}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setTravel(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTravelIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">숙박비 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={lodging}
-                    onChange={e => setLodging(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">숙박비 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLodgingDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={lodging === "" ? "" : lodging}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setLodging(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleLodgingIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">식사 및 활동비 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={activities}
-                    onChange={e => setActivities(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">식사 및 활동비 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleActivitiesDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={activities === "" ? "" : activities}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setActivities(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleActivitiesIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">월 적금 저축액 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={budgetMonthly}
-                    onChange={e => setBudgetMonthly(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-amber-400 font-extrabold rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">월 적금 저축액 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={budgetMonthly === "" ? "" : budgetMonthly}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setBudgetMonthly(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-amber-400 font-extrabold rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {category === "해보고 싶은 것" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">월 금액 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={budgetMonthly}
-                    onChange={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      setBudgetMonthly(val);
-                      setBudgetOneTime(val * 12);
-                    }}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">월 금액 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={budgetMonthly === "" ? "" : budgetMonthly}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const parsed = val === "" ? "" : (parseInt(val) || 0);
+                        setBudgetMonthly(parsed);
+                        if (parsed !== "") {
+                          setBudgetOneTime(parsed * 12);
+                        }
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBudgetMonthlyIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-center">
-                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block">연간 금액 (만원)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={budgetOneTime}
-                    onChange={e => setBudgetOneTime(parseInt(e.target.value) || 0)}
-                    className="bg-stone-900 border border-stone-800 text-stone-100 rounded-lg p-2 text-xs w-full text-center font-mono focus:outline-none focus:border-amber-500"
-                  />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-stone-500 uppercase tracking-tight block text-center">연간 금액 (만원)</label>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={handleBudgetOneTimeDecrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={budgetOneTime === "" ? "" : budgetOneTime}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setBudgetOneTime(val === "" ? "" : (parseInt(val) || 0));
+                      }}
+                      className="bg-stone-900 border border-stone-800 text-stone-100 rounded-xl h-10 w-full text-center font-mono focus:outline-none focus:border-amber-500 text-xs focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBudgetOneTimeIncrement}
+                      className="h-10 w-10 bg-stone-900 hover:bg-stone-850 active:scale-95 text-stone-250 hover:text-stone-100 border border-stone-800 rounded-xl flex items-center justify-center font-bold text-lg select-none cursor-pointer shrink-0 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -397,10 +661,10 @@ export default function VisionManualAddModal({ onAddVision, onClose }: VisionMan
               <span>예상 합계 소요 일시금:</span>
               <span className="text-amber-400 font-bold">
                 {category === "소유" 
-                  ? lodging.toLocaleString() 
+                  ? (Number(lodging) || 0).toLocaleString() 
                   : category === "가고 싶은 곳" 
-                  ? (travel + lodging + activities).toLocaleString() 
-                  : budgetOneTime.toLocaleString()}만 원
+                  ? ((Number(travel) || 0) + (Number(lodging) || 0) + (Number(activities) || 0)).toLocaleString() 
+                  : (Number(budgetOneTime) || 0).toLocaleString()}만 원
               </span>
             </div>
           </div>
