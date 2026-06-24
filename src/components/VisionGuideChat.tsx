@@ -66,7 +66,14 @@ export default function VisionGuideChat({ onAddVision }: VisionGuideChatProps) {
       });
 
       if (!response.ok) {
-        throw new Error("서버와의 통신이 원활하지 않습니다.");
+        let errMsg = "서버와의 통신이 원활하지 않습니다.";
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = `서버 에러: ${errData.error}`;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
       const data = await response.json();

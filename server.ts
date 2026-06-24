@@ -17,23 +17,7 @@ app.use(express.json({ limit: '10mb' }));
 
 const PORT = 3000;
 
-// Initialize Gemini Client
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("WARNING: GEMINI_API_KEY environment variable is not set. Some features will fail.");
-  }
-  return new GoogleGenAI({
-    apiKey: apiKey || "MOCK_KEY",
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
-  });
-};
-
-const ai = getGeminiClient();
+// We dynamically initialize GoogleGenAI inside each endpoint to ensure the freshest environment variables (lazy initialization).
 
 // API: Health probe
 app.get("/api/health", (req: Request, res: Response) => {
@@ -48,7 +32,8 @@ app.post("/api/chat-guide", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "messages array is required" });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       // Graceful fallback for local development if keys are absent
       return res.json({
         status: "draft",
@@ -56,6 +41,15 @@ app.post("/api/chat-guide", async (req: Request, res: Response) => {
         questions: ["목표로 하시는 버킷리스트가 무엇인가요? (예: 유럽 여행, 드림카 구매, 내 집 마련 등)"]
       });
     }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
 
     // Format and clean chat history so that:
     // 1. It starts with role: "user" (Gemini requirement)
@@ -196,9 +190,19 @@ app.post("/api/generate-image", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "prompt is required" });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return res.status(401).json({ error: "Gemini API Key is missing on the server. Please check Secrets." });
     }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
 
     console.log(`Generating image for prompt: "${prompt}"`);
 
